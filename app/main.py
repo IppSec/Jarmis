@@ -7,7 +7,7 @@ from typing import Optional, Union
 from app.schemas import Jarm, Jarm1, Jarm2, JarmSearchResults, FetchJarm1, FetchJarm2
 
 from app.lib.jarm import get_jarm
-from app.lib.getheader import get_header
+from app.lib import detection
 from base64 import b64decode
 
 from urllib.parse import urlparse
@@ -67,7 +67,9 @@ def search_signature(
     results = filter(lambda jarm: keyword.lower() in jarm["sig"].lower(), JARMS) 
     return {"results": list(results)[:max_results]}
 
-@api_router.get("/api/v1/fetch", status_code=200, response_model=Union[FetchJarm2, FetchJarm1])
+# ToDo: Fix pydantic to allow the CobaltStrike schema
+#@api_router.get("/api/v1/fetch", status_code=200, response_model=Union[FetchJarm2, FetchJarm1])
+@api_router.get("/api/v1/fetch", status_code=200 )
 def fetch_jarm(*, endpoint: str ):
     """
     Query an endpoint to retrieve its JARM and grab metadata if malicious.
@@ -85,8 +87,8 @@ def fetch_jarm(*, endpoint: str ):
     for result in results:
         if result['ismalicious'] == '1':
             try:
+                resp['meta'], resp['ismalicious'] = detection.inspect(endpoint, result['note'])
                 resp['note'] = result['note'] + '?'
-                resp['server'], resp['ismalicious'] = get_header(o.netloc + o.path)
                 if resp['ismalicious']:
                     resp['note'] = result['note']
 
